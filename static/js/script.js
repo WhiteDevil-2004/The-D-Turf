@@ -23,9 +23,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const isWeekend = date.getDay() === 0 || date.getDay() === 6;
         const base = isWeekend ? 1200 : 1000;
         const diffDays = Math.ceil(Math.abs(date - LAUNCH_DATE) / (1000 * 60 * 60 * 24)) + 1;
-        
-        if (diffDays <= 10) return { original: base, final: base * 0.5, discount: base * 0.5, label: "50% Opening Off" };
-        return { original: base, final: base, discount: 0, label: "" };
+        if (diffDays <= 10) return { orig: base, final: base * 0.5, disc: base * 0.5, label: "50% Off" };
+        return { orig: base, final: base, disc: 0, label: "" };
     }
 
     function renderSlots(date) {
@@ -55,37 +54,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function updateSummary() {
         const data = getPriceData(datePicker.value);
-        const totalOrig = selectedSlots.length * data.original;
-        const totalFinal = selectedSlots.length * data.final;
-        const totalDisc = selectedSlots.length * data.discount;
-
+        const tFinal = selectedSlots.length * data.final;
         summaryTime.textContent = selectedSlots.length > 0 ? selectedSlots.sort().join(", ") : '-';
-        
         if (selectedSlots.length > 0) {
-            summaryPrice.innerHTML = `
-                <span style="text-decoration: line-through; color: #777; font-size: 0.9rem;">₹${totalOrig}</span> 
-                <span style="color: #27ae60; font-size: 0.9rem;">-${totalDisc} (${data.label})</span><br>
-                <strong style="font-size: 1.3rem;">Total: ₹${totalFinal}</strong>
-            `;
-        } else {
-            summaryPrice.textContent = `₹${data.final}`;
-        }
-
-        if (payBtn) {
-            payBtn.disabled = selectedSlots.length === 0;
-            payBtn.textContent = `Pay ₹${totalFinal || data.final} 🏏`;
-        }
+            summaryPrice.innerHTML = `<span style="text-decoration:line-through;color:#777;font-size:0.8rem">₹${selectedSlots.length * data.orig}</span> <span style="color:#27ae60;font-size:0.8rem">-${selectedSlots.length * data.disc} (${data.label})</span><br><strong>Total: ₹${tFinal}</strong>`;
+        } else { summaryPrice.textContent = `₹${data.final}`; }
+        if (payBtn) { payBtn.disabled = selectedSlots.length === 0; payBtn.textContent = `Pay ₹${tFinal || data.final} 🏏`; }
     }
 
     if (bookingForm) {
         bookingForm.onsubmit = (e) => {
             e.preventDefault();
             payBtn.disabled = true; payBtn.textContent = '⏳ Processing...';
-            fetch('/api/create-order', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ date: datePicker.value, times: selectedSlots })
-            }).then(res => res.json()).then(data => {
+            fetch('/api/create-order', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ date: datePicker.value, times: selectedSlots }) })
+            .then(res => res.json()).then(data => {
                 if (!data.success) { alert(data.error); payBtn.disabled = false; return; }
                 const options = {
                     key: payBtn.dataset.key, amount: data.amount, currency: "INR", name: "THE 'D' TURF", order_id: data.order_id,
