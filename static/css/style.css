@@ -400,7 +400,23 @@ h3 {
     background: var(--accent-hover);
 }
 
-/* Responsive */
+/* Responsive Styles */
+@media (max-width: 768px) {
+    .nav-links {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 10px;
+        padding: 10px 0;
+    }
+
+    .hero {
+        padding-top: 140px; /* Increased to prevent overlap */
+        flex-direction: column;
+        text-align: center;
+    }
+}
+
 @media (max-width: 1024px) {
     .booking-container {
         grid-template-columns: 1fr;
