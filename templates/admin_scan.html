@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Turf Admin - Scan Ticket</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <style>
+        body { background: #0a0a0c; color: white; font-family: 'Outfit', sans-serif; text-align: center; padding: 20px; }
+        #reader { width: 100%; max-width: 500px; margin: auto; border: 2px solid #d11a2a; border-radius: 10px; overflow: hidden; }
+        #result { margin-top: 20px; padding: 20px; border-radius: 10px; display: none; }
+        .success { background: #1a7a4a; color: white; }
+        .error { background: #8b1a1a; color: white; }
+        h1 { color: #d11a2a; }
+    </style>
+</head>
+<body>
+    <h1>Turf Entry Scanner</h1>
+    <p>Point camera at the user's ticket QR code</p>
+    
+    <div id="reader"></div>
+    
+    <div id="result"></div>
+
+    <script>
+        function onScanSuccess(decodedText, decodedResult) {
+            // Extract Booking ID from text: "BookingID: #DT1..."
+            const match = decodedText.match(/#DT(\d+)/);
+            if (match) {
+                const bookingId = match[1];
+                verifyBooking(bookingId);
+            } else {
+                showResult("❌ Invalid QR Code Format", "error");
+            }
+        }
+
+        function verifyBooking(id) {
+            fetch(`/admin/verify-api/${id}`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        showResult(`✅ VERIFIED!<br>Player: ${data.name}<br>Slot: ${data.date} @ ${data.time}`, "success");
+                    } else {
+                        showResult(`❌ FAILED: ${data.error}`, "error");
+                    }
+                });
+        }
+
+        function showResult(msg, type) {
+            const resDiv = document.getElementById('result');
+            resDiv.innerHTML = msg;
+            resDiv.className = type;
+            resDiv.style.display = 'block';
+        }
+
+        let html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 250 });
+        html5QrcodeScanner.render(onScanSuccess);
+    </script>
+</body>
+</html>

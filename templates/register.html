@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign Up - THE 'D' TURF</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Outfit:wght@800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=2">
+</head>
+<body class="auth-page">
+    <div class="auth-container">
+        <a href="{{ url_for('home') }}" class="auth-logo">
+            <img src="{{ url_for('static', filename='img/logo.jpg') }}" alt="The D Turf Logo" class="logo-img">
+            <span>THE 'D' <span class="highlight">TURF</span></span>
+        </a>
+        
+        <div class="auth-card glass-card">
+            <h2>Create an Account</h2>
+            <p>Join the turf to book your slots</p>
+            
+            {% if error %}
+            <div class="alert alert-error">{{ error }}</div>
+            {% endif %}
+            
+            <form method="POST" action="{{ url_for('register') }}">
+                <div class="form-group">
+                    <label for="name">Full Name</label>
+                    <input type="text" id="name" name="name" placeholder="Enter your full name" required>
+                </div>
+                <div class="form-group">
+                    <label>Email Address (For Digital Ticket)</label>
+                    <input type="email" name="email" placeholder="Enter your email" required>
+                </div>
+                <div class="form-group">
+                    <label for="phone">Phone Number</label>
+                    <input type="tel" id="phone" name="phone" placeholder="Enter your phone number" required>
+                </div>
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" name="password" placeholder="Create a password" required>
+                </div>
+                <button type="submit" class="cta-btn full-width">Sign Up</button>
+            </form>
+            
+            <p class="auth-switch">Already have an account? <a href="{{ url_for('login') }}">Login</a></p>
+        </div>
+    </div>
+</body>
+</html>

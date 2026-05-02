@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>THE 'D' TURF - Box Cricket</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=3">
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+</head>
+<body>
+    <!-- Splash Screen -->
+    <div id="splash-screen">
+        <img src="{{ url_for('static', filename='img/logo.jpg') }}" alt="The D Turf Logo" class="splash-logo">
+    </div>
+
+    <div class="background-effects">
+        <div class="glow-orb orb-1"></div>
+        <div class="glow-orb orb-2"></div>
+    </div>
+
+    <nav class="navbar">
+        <div class="logo">
+            <img src="{{ url_for('static', filename='img/logo.jpg') }}" alt="The D Turf Logo" class="logo-img">
+            THE 'D' <span>TURF</span>
+        </div>
+        <div class="nav-links">
+            <a href="#home">Home</a>
+            <a href="#book">Book Turf</a>
+            <a href="#contact">Contact</a>
+            {% if session.get('user_id') %}
+                <a href="#bookings" class="nav-btn">My Bookings</a>
+                <a href="{{ url_for('logout') }}" class="nav-btn outline">Logout</a>
+            {% else %}
+                <a href="{{ url_for('login') }}" class="nav-btn outline">Login</a>
+                <a href="{{ url_for('register') }}" class="nav-btn">Sign Up</a>
+            {% endif %}
+        </div>
+    </nav>
+
+    <main>
+        <section id="home" class="hero">
+            <div class="hero-content">
+                <h1>Welcome to <br><span class="highlight">THE 'D' TURF</span></h1>
+                <p>Are you ready to be one of us? Premium turf, high-energy vibes. Book your slot now and dominate the game.</p>
+                <a href="#book" class="cta-button">Book Your Slot</a>
+            </div>
+            <div class="hero-image">
+                <img src="{{ url_for('static', filename='img/poster.jpg') }}" alt="The D Turf Poster">
+            </div>
+        </section>
+
+        <section id="book" class="booking-section">
+            <h2 class="section-title">Book Your <span>Slot</span></h2>
+            <div class="booking-container">
+                <div class="calendar-container">
+                    <h3>Select Date</h3>
+                    <input type="date" id="booking-date" class="date-picker">
+                </div>
+                
+                <div class="slots-container">
+                    <h3>Available Time Slots</h3>
+                    <div class="slots-grid" id="slots-grid">
+                        <!-- Slots will be injected via JS -->
+                        <div class="slot-placeholder">Please select a date first</div>
+                    </div>
+                </div>
+
+                <div class="booking-summary">
+                    <h3>Booking Details</h3>
+                    <form id="booking-form">
+                        {% if session.get('user_id') %}
+                            <p class="user-greeting">Booking as: <strong>{{ session.get('user_name') }}</strong></p>
+                        {% else %}
+                            <div class="alert alert-warning" style="margin-bottom: 15px;">You must log in to book a slot. <a href="{{ url_for('login') }}">Login here</a>.</div>
+                        {% endif %}
+                        <div class="selected-info">
+                            <p>Date: <span id="summary-date">-</span></p>
+                            <p>Time: <span id="summary-time">-</span></p>
+                            <p>Price: <span id="summary-price">₹499 / hr</span></p>
+                        </div>
+                        {% if session.get('user_id') %}
+                            <button type="submit" class="pay-button" disabled id="pay-btn" data-key="{{ razorpay_key_id }}" data-username="{{ session.get('user_name') }}">Proceed to Pay ₹499 🏏</button>
+                        {% else %}
+                            <a href="{{ url_for('login') }}" class="pay-button" style="text-align: center; text-decoration: none; display: block; background: #444; color: white; opacity: 0.85;">🔐 Login to Book</a>
+                        {% endif %}
+                    </form>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer id="contact" class="footer-section">
+        <div class="footer-content">
+            <div class="footer-col brand-col">
+                <div class="logo">
+                    <img src="{{ url_for('static', filename='img/logo.jpg') }}" alt="The D Turf Logo" class="logo-img">
+                    THE 'D' <span>TURF</span>
+                </div>
+                <p class="address">Next to Prime Prakruti, Duttapura Road, Gujarat</p>
+            </div>
+            
+            <div class="footer-col contact-col">
+                <h3>Contact Us</h3>
+                <p><strong>Owner:</strong> Parth Makwana (7041053127)</p>
+                <p><strong>Partner:</strong> 7859926706, 9173713005</p>
+                <p>For advance bookings and inquiries, please reach out directly.</p>
+            </div>
+            
+            <div class="footer-col sponsor-col">
+                <h3>Our Sponsors</h3>
+                <div class="sponsor-grid">
+                    <div class="sponsor-card">Sponsor 1</div>
+                    <div class="sponsor-card">Sponsor 2</div>
+                </div>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>&copy; 2026 THE 'D' TURF. All rights reserved. | Made with <span style="color: red; font-size: 1.2rem; vertical-align: middle;">❤️</span> by <strong>Jaydev</strong></p>
+            {% if is_admin %}
+                <p style="margin-top: 10px;"><a href="/admin/scan" style="color: #666; font-size: 0.7rem; text-decoration: none;">🔐 Admin Scanner Access</a></p>
+            {% endif %}
+        </div>
+    </footer>
+
+    <script src="{{ url_for('static', filename='js/script.js') }}?v=3"></script>
+</body>
+</html>

@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Your Ticket - THE 'D' TURF</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <style>
+        :root {
+            --bg-color: #0a0a0c;
+            --accent: #d11a2a;
+            --card-bg: #1a1a1e;
+        }
+        body {
+            background: var(--bg-color);
+            color: white;
+            font-family: 'Outfit', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+        .ticket-card {
+            background: var(--card-bg);
+            width: 350px;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+            position: relative;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .ticket-header {
+            background: var(--accent);
+            padding: 20px;
+            text-align: center;
+        }
+        .ticket-header h2 { margin: 0; font-size: 1.5rem; letter-spacing: 1px; }
+        .ticket-body {
+            padding: 25px;
+            text-align: center;
+        }
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            text-align: left;
+        }
+        .info-label { color: #888; font-size: 0.8rem; text-transform: uppercase; margin-bottom: 5px; }
+        .info-value { font-weight: 600; font-size: 1rem; }
+        
+        .qr-container {
+            background: white;
+            padding: 15px;
+            border-radius: 12px;
+            display: inline-block;
+            margin: 20px 0;
+        }
+        .ticket-divider {
+            height: 2px;
+            background: repeating-linear-gradient(to right, transparent, transparent 5px, rgba(255,255,255,0.1) 5px, rgba(255,255,255,0.1) 10px);
+            margin: 10px 0;
+            position: relative;
+        }
+        .ticket-divider::before, .ticket-divider::after {
+            content: '';
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            background: var(--bg-color);
+            border-radius: 50%;
+            top: -10px;
+        }
+        .ticket-divider::before { left: -10px; }
+        .ticket-divider::after { right: -10px; }
+        
+        .status-badge {
+            background: #00ff88;
+            color: #000;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 800;
+            display: inline-block;
+            margin-top: 10px;
+        }
+        .btn-home {
+            display: block;
+            margin: 20px auto;
+            color: #aaa;
+            text-decoration: none;
+            font-size: 0.9rem;
+        }
+        @media print {
+            .btn-home { display: none; }
+            body { background: white; color: black; }
+        }
+    </style>
+</head>
+<body>
+    <div class="ticket-card">
+        <div class="ticket-header">
+            <h2>THE 'D' TURF</h2>
+        </div>
+        
+        <div class="ticket-body">
+            <div class="info-row">
+                <div>
+                    <div class="info-label">PLAYER</div>
+                    <div class="info-value">{{ booking['user_name'] }}</div>
+                </div>
+                <div>
+                    <div class="info-label">BOOKING ID</div>
+                    <div class="info-value">#DT{{ booking['id'] }}</div>
+                </div>
+            </div>
+            
+            <div class="info-row">
+                <div>
+                    <div class="info-label">DATE</div>
+                    <div class="info-value">{{ booking['date'] }}</div>
+                </div>
+                <div>
+                    <div class="info-label">TIME</div>
+                    <div class="info-value">{{ booking['time'] }}</div>
+                </div>
+            </div>
+
+            <div class="ticket-divider"></div>
+
+            <div class="qr-container" id="qrcode"></div>
+            <p style="font-size: 0.7rem; color: #888;">Scan this at the Turf entry</p>
+            
+            <div class="status-badge">CONFIRMED</div>
+        </div>
+        
+        <div style="padding: 0 25px 25px;">
+            <button onclick="window.print()" style="width: 100%; background: #fff; color: #000; border: none; padding: 12px; border-radius: 10px; font-weight: 800; cursor: pointer; margin-bottom: 10px;">💾 Download / Save as PDF</button>
+            <a href="/" class="btn-home" style="margin: 0; text-align: center;">← Back to Home</a>
+        </div>
+    </div>
+
+    <script>
+        // Generate QR Code with booking details
+        const bookingData = "BookingID: #DT{{ booking['id'] }}\nPlayer: {{ booking['user_name'] }}\nSlot: {{ booking['date'] }} @ {{ booking['time'] }}";
+        new QRCode(document.getElementById("qrcode"), {
+            text: bookingData,
+            width: 150,
+            height: 150,
+            colorDark : "#000000",
+            colorLight : "#ffffff",
+            correctLevel : QRCode.CorrectLevel.H
+        });
+    </script>
+</body>
+</html>
