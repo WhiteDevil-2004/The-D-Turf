@@ -1,8 +1,9 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // Splash screen
+    // 1. Splash Screen
     const splash = document.getElementById('splash-screen');
     if (splash) setTimeout(() => { splash.style.opacity = '0'; setTimeout(() => splash.style.visibility = 'hidden', 800); }, 2000);
 
+    // 2. Selectors
     const datePicker = document.getElementById('booking-date'), slotsGrid = document.getElementById('slots-grid');
     const summaryTime = document.getElementById('summary-time'), summaryPrice = document.getElementById('summary-price');
     const payBtn = document.getElementById('pay-btn'), bookingForm = document.getElementById('booking-form');
@@ -10,15 +11,14 @@ document.addEventListener('DOMContentLoaded', () => {
     let selectedSlots = [];
     const PRICE_PER_SLOT = 499;
 
+    // 3. Render Slots
+    const availableSlots = ["06:00 AM", "07:00 AM", "08:00 AM", "09:00 AM", "10:00 AM", "04:00 PM", "05:00 PM", "06:00 PM", "07:00 PM", "08:00 PM", "09:00 PM", "10:00 PM"];
     const today = new Date().toISOString().split('T')[0];
     if (datePicker) { datePicker.min = today; datePicker.value = today; renderSlots(today); }
-
-    const availableSlots = ["06:00 AM", "07:00 AM", "08:00 AM", "09:00 AM", "10:00 AM", "04:00 PM", "05:00 PM", "06:00 PM", "07:00 PM", "08:00 PM", "09:00 PM", "10:00 PM"];
-
     if (datePicker) datePicker.addEventListener('change', (e) => { selectedSlots = []; updateSummary(); renderSlots(e.target.value); });
 
     function renderSlots(date) {
-        slotsGrid.innerHTML = '<p>Loading slots...</p>';
+        slotsGrid.innerHTML = '<div class="loader">Loading...</div>';
         fetch(`/api/slots?date=${date}`).then(res => res.json()).then(data => {
             slotsGrid.innerHTML = '';
             const booked = data.booked_slots || [];
@@ -27,12 +27,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 const slotEl = document.createElement('div');
                 slotEl.className = `slot ${isBooked ? 'booked' : ''}`;
                 slotEl.textContent = time;
-                if (!isBooked) slotEl.addEventListener('click', () => {
+                if (!isBooked) slotEl.onclick = () => {
                     slotEl.classList.toggle('selected');
                     if (slotEl.classList.contains('selected')) selectedSlots.push(time);
                     else selectedSlots = selectedSlots.filter(s => s !== time);
                     updateSummary();
-                });
+                };
                 slotsGrid.appendChild(slotEl);
             });
         });
@@ -41,15 +41,21 @@ document.addEventListener('DOMContentLoaded', () => {
     function updateSummary() {
         const total = selectedSlots.length * PRICE_PER_SLOT;
         summaryTime.textContent = selectedSlots.length > 0 ? selectedSlots.sort().join(", ") : '-';
-        summaryPrice.textContent = `₹${total || PRICE_PER_SLOT} ${selectedSlots.length > 0 ? '('+selectedSlots.length+' slots)' : '/ hr'}`;
-        if (payBtn) { payBtn.disabled = selectedSlots.length === 0; payBtn.textContent = `Proceed to Pay ₹${total || PRICE_PER_SLOT} 🏏`; }
+        summaryPrice.textContent = `₹${total || PRICE_PER_SLOT}`;
+        if (payBtn) {
+            payBtn.disabled = selectedSlots.length === 0;
+            payBtn.textContent = `Pay ₹${total || PRICE_PER_SLOT} via UPI 🏏`;
+        }
     }
 
+    // 4. Razorpay Payment Logic
     if (bookingForm) {
-        bookingForm.addEventListener('submit', (e) => {
+        bookingForm.onsubmit = (e) => {
             e.preventDefault();
-            if (selectedSlots.length === 0) return alert('Select a slot!');
-            payBtn.disabled = true; payBtn.textContent = '⏳ Creating Order...';
+            if (selectedSlots.length === 0) return alert('Pehle slot select karein!');
+
+            payBtn.disabled = true;
+            payBtn.textContent = '⏳ Waiting for UPI...';
 
             fetch('/api/create-order', {
                 method: 'POST',
@@ -59,44 +65,46 @@ document.addEventListener('DOMContentLoaded', () => {
             .then(res => res.json()).then(data => {
                 if (!data.success) { alert(data.error); payBtn.disabled = false; return; }
 
+                // RAZORPAY CONFIG (UPI FIRST)
                 const options = {
                     key: payBtn.dataset.key,
                     amount: data.amount,
                     currency: "INR",
                     name: "THE 'D' TURF",
-                    description: `Book ${selectedSlots.length} slots`,
-                    image: "/static/img/logo.jpg",
+                    description: `${selectedSlots.length} Slots Booking`,
+                    image: "https://thedturf.onrender.com/static/img/logo.jpg", // Logo URL
                     order_id: data.order_id,
-                    prefill: { name: data.user_name, contact: data.user_phone },
-                    theme: { color: "#d11a2a" },
-                    // FORCE UPI CONFIG
+                    prefill: {
+                        name: data.user_name,
+                        contact: data.user_phone,
+                        method: 'upi' // UPI ko priority deta hai
+                    },
                     config: {
                         display: {
-                            blocks: {
-                                upi: {
-                                    name: 'Pay via Google Pay / PhonePe / Paytm',
-                                    instruments: [{ method: 'upi' }]
-                                }
-                            },
-                            sequence: ['block.upi'],
+                            hide: [{ method: 'paylater' }, { method: 'card' }], // Inhe chhupa do
                             preferences: { show_default_blocks: true }
                         }
                     },
+                    theme: { color: "#d11a2a" },
                     handler: function (response) {
                         fetch('/api/verify-payment', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                                razorpay_order_id: response.razorpay_order_id,
-                                razorpay_payment_id: response.razorpay_payment_id,
-                                razorpay_signature: response.razorpay_signature
-                            })
-                        }).then(r => r.json()).then(v => { if (v.success) window.location.href = `/ticket/${v.booking_id}`; else alert('Verification Failed!'); });
+                            body: JSON.stringify(response)
+                        })
+                        .then(r => r.json()).then(v => {
+                            if (v.success) window.location.href = `/ticket/${v.booking_id}`;
+                            else alert('Payment Verification Failed!');
+                        });
                     },
-                    modal: { ondismiss: function() { payBtn.disabled = false; } }
+                    modal: { ondismiss: function() { payBtn.disabled = false; updateSummary(); } }
                 };
-                new Razorpay(options).open();
+                const rzp = new Razorpay(options);
+                rzp.open();
+            }).catch(err => {
+                alert('Error: ' + err);
+                payBtn.disabled = false;
             });
-        });
+        };
     }
 });
