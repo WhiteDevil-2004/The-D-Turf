@@ -1,6 +1,14 @@
 document.addEventListener('DOMContentLoaded', () => {
+    // 💎 PREMIUM SPLASH HANDLER
     const splash = document.getElementById('splash-screen');
-    if (splash) setTimeout(() => { splash.style.opacity = '0'; setTimeout(() => splash.style.visibility = 'hidden', 800); }, 2000);
+    if (splash) {
+        setTimeout(() => {
+            splash.style.opacity = '0';
+            setTimeout(() => {
+                splash.style.visibility = 'hidden';
+            }, 1000);
+        }, 3500);
+    }
 
     const datePicker = document.getElementById('booking-date');
     const morningGrid = document.getElementById('morning-slots'), eveningGrid = document.getElementById('evening-slots');
@@ -18,17 +26,42 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (datePicker) datePicker.addEventListener('change', (e) => { selectedSlots = []; updateSummary(); renderSlots(e.target.value); });
 
-    function getPriceData(dateStr) {
+    // 💰 SMART PRICING FUNCTION (As per User Image)
+    function getPriceData(dateStr, timeStr) {
         const date = new Date(dateStr);
         const isWeekend = date.getDay() === 0 || date.getDay() === 6;
-        const base = isWeekend ? 1200 : 1000;
+
+        // Determine if morning or evening
+        const isMorning = morningTimes.includes(timeStr);
+
+        let basePrice = 0;
+        if (isMorning) {
+            basePrice = isWeekend ? 999 : 799;
+        } else {
+            basePrice = isWeekend ? 1199 : 999;
+        }
+
         const diffDays = Math.ceil(Math.abs(date - LAUNCH_DATE) / (1000 * 60 * 60 * 24)) + 1;
-        if (diffDays <= 10) return { orig: base, final: base * 0.5, disc: base * 0.5, label: "50% Off" };
-        return { orig: base, final: base, disc: 0, label: "" };
+
+        let finalPrice = basePrice;
+        let discountLabel = "";
+        let discountAmount = 0;
+
+        if (diffDays <= 7) {
+            finalPrice = basePrice * 0.5;
+            discountAmount = basePrice * 0.5;
+            discountLabel = "50% OFF (First 7 Days)";
+        } else if (diffDays <= 15) {
+            finalPrice = basePrice * 0.75;
+            discountAmount = basePrice * 0.25;
+            discountLabel = "25% OFF (Up to 15 Days)";
+        }
+
+        return { orig: basePrice, final: finalPrice, disc: discountAmount, label: discountLabel };
     }
 
     function renderSlots(date) {
-        morningGrid.innerHTML = eveningGrid.innerHTML = '<p>Loading...</p>';
+        morningGrid.innerHTML = eveningGrid.innerHTML = '<div class="loader">Loading...</div>';
         fetch(`/api/slots?date=${date}`).then(res => res.json()).then(data => {
             morningGrid.innerHTML = eveningGrid.innerHTML = '';
             const booked = data.booked_slots || [];
@@ -41,45 +74,68 @@ document.addEventListener('DOMContentLoaded', () => {
         const isBooked = booked.includes(time);
         const slotEl = document.createElement('div');
         slotEl.className = `slot ${isBooked ? 'booked' : ''}`;
-        const price = getPriceData(datePicker.value).final;
-        slotEl.innerHTML = `${time}<br><small>₹${price}</small>`;
+
+        const priceData = getPriceData(datePicker.value, time);
+        slotEl.innerHTML = `${time}<br><small style="color:var(--text-muted)">₹${priceData.final.toFixed(2)}</small>`;
+
         if (!isBooked) slotEl.onclick = () => {
             slotEl.classList.toggle('selected');
-            if (slotEl.classList.contains('selected')) selectedSlots.push(time);
-            else selectedSlots = selectedSlots.filter(s => s !== time);
+            if (slotEl.classList.contains('selected')) {
+                selectedSlots.push({ time: time, price: priceData.final, orig: priceData.orig });
+            } else {
+                selectedSlots = selectedSlots.filter(s => s.time !== time);
+            }
             updateSummary();
         };
         container.appendChild(slotEl);
     }
 
     function updateSummary() {
-        const data = getPriceData(datePicker.value);
-        const tFinal = selectedSlots.length * data.final;
-        summaryTime.textContent = selectedSlots.length > 0 ? selectedSlots.sort().join(", ") : '-';
+        let totalFinal = 0;
+        let totalOrig = 0;
+        selectedSlots.forEach(s => {
+            totalFinal += s.price;
+            totalOrig += s.orig;
+        });
+
+        summaryTime.textContent = selectedSlots.length > 0 ? selectedSlots.map(s => s.time).sort().join(", ") : '-';
+
         if (selectedSlots.length > 0) {
-            summaryPrice.innerHTML = `<span style="text-decoration:line-through;color:#777;font-size:0.8rem">₹${selectedSlots.length * data.orig}</span> <span style="color:#27ae60;font-size:0.8rem">-${selectedSlots.length * data.disc} (${data.label})</span><br><strong>Total: ₹${tFinal}</strong>`;
-        } else { summaryPrice.textContent = `₹${data.final}`; }
-        if (payBtn) { payBtn.disabled = selectedSlots.length === 0; payBtn.textContent = `Pay ₹${tFinal || data.final} 🏏`; }
+            const savings = totalOrig - totalFinal;
+            summaryPrice.innerHTML = `
+                <span style="text-decoration:line-through;color:#777;font-size:0.85rem">₹${totalOrig.toFixed(2)}</span> 
+                <span style="color:#27ae60;font-size:0.85rem">-${savings.toFixed(2)} Savings</span><br>
+                <strong style="font-size:1.4rem;color:white">Total: ₹${totalFinal.toFixed(2)}</strong>
+            `;
+        } else {
+            summaryPrice.textContent = `₹0.00`;
+        }
+
+        if (payBtn) {
+            payBtn.disabled = selectedSlots.length === 0;
+            payBtn.textContent = selectedSlots.length > 0 ? `Pay ₹${totalFinal.toFixed(2)} 🏏` : "Select Slots to Book";
+        }
     }
 
     if (bookingForm) {
         bookingForm.onsubmit = (e) => {
             e.preventDefault();
-            payBtn.disabled = true; payBtn.textContent = '⏳ Processing...';
-            fetch('/api/create-order', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ date: datePicker.value, times: selectedSlots }) })
-            .then(res => res.json()).then(data => {
-                if (!data.success) { alert(data.error); payBtn.disabled = false; return; }
-                const options = {
-                    key: payBtn.dataset.key, amount: data.amount, currency: "INR", name: "THE 'D' TURF", order_id: data.order_id,
-                    prefill: { name: data.user_name, contact: data.user_phone }, theme: { color: "#d11a2a" },
-                    handler: function (response) {
-                        fetch('/api/verify-payment', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(response) })
-                        .then(r => r.json()).then(v => { if (v.success) window.location.href = `/ticket/${v.booking_id}`; });
-                    },
-                    modal: { ondismiss: function() { payBtn.disabled = false; } }
-                };
-                new Razorpay(options).open();
-            });
+            const timesOnly = selectedSlots.map(s => s.time);
+            payBtn.disabled = true; payBtn.textContent = '⏳ Creating Order...';
+            fetch('/api/create-order', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ date: datePicker.value, times: timesOnly }) })
+                .then(res => res.json()).then(data => {
+                    if (!data.success) { alert(data.error); payBtn.disabled = false; return; }
+                    const options = {
+                        key: payBtn.dataset.key, amount: data.amount, currency: "INR", name: "THE 'D' TURF", order_id: data.order_id,
+                        prefill: { name: data.user_name, contact: data.user_phone }, theme: { color: "#d11a2a" },
+                        handler: function (response) {
+                            fetch('/api/verify-payment', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(response) })
+                                .then(r => r.json()).then(v => { if (v.success) window.location.href = `/ticket/${v.booking_id}`; });
+                        },
+                        modal: { ondismiss: function () { payBtn.disabled = false; } }
+                    };
+                    new Razorpay(options).open();
+                });
         };
     }
 });
